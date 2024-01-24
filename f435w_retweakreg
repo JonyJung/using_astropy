@@ -1,0 +1,20 @@
+input = glob.glob("*.fits") #집어 넣을 파일명
+
+tweakreg.TweakReg(
+        input,
+        imagefindcfg={
+            "threshold": 2.3,
+            "conv_width": 3.5,
+            "peakmax": 15000,
+            "peakmin": 0.0003,
+        },
+        fitgeometry="general",
+        #fitgeometry='rscale',
+        interactive=False,
+        shiftfile=True,
+        see2dplot=True,  # See 2d histogram for initial offset?
+        wcsname=wcsname,  # Give our WCS a new name
+        reusename=True,
+        configobj = None, 
+        outshifts='shift_general.txt',          
+        updatehdr=True)
