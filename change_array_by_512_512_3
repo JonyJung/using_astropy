@@ -1,0 +1,33 @@
+import os
+import numpy as np
+from astropy.io import fits
+
+# 입력 폴더와 출력 폴더 설정
+input_folder = '01_cut_file'
+output_folder = '01_change_array'
+
+# 출력 폴더가 없으면 생성
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+
+# 입력 폴더의 모든 .fits 파일에 대해 처리
+for filename in os.listdir(input_folder):
+    if filename.endswith('.fits'):
+        # fits 파일 읽기
+        fits_data = fits.getdata(os.path.join(input_folder, filename))
+
+        # 새로운 shape의 배열 생성
+        rgb_data = np.zeros((fits_data.shape[0], fits_data.shape[1], 3), dtype=np.uint8)
+
+        # 단일 채널을 RGB에 매핑
+        rgb_data[:, :, 0] = fits_data  # Red 채널
+        rgb_data[:, :, 1] = fits_data  # Green 채널
+        rgb_data[:, :, 2] = fits_data  # Blue 채널
+
+        # 새로운 fits 파일 생성
+        output_filename = os.path.join(output_folder, f"{os.path.splitext(filename)[0]}_output.fits")
+        hdu = fits.PrimaryHDU(rgb_data)
+        hdul = fits.HDUList([hdu])
+        hdul.writeto(output_filename, overwrite=True)
+
+print("Conversion completed.")
