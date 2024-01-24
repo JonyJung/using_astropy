@@ -1,0 +1,97 @@
+import glob
+import os
+import shutil
+import warnings
+
+import matplotlib.pyplot as plt
+import numpy as np
+from astrocut import fits_cut
+from astropy import units as u
+from astropy import wcs
+from astropy.coordinates import SkyCoord
+from astropy.io import fits
+from astropy.utils.data import get_pkg_data_filename
+from astropy.visualization import ZScaleInterval
+from mpdaf.obj import WCS, Image
+from scipy import io, ndimage
+
+from astropy.wcs import WCS
+from astropy.wcs.utils import pixel_to_skycoord
+import astropy.units as u
+import numpy as np
+from astropy.io import fits
+from astropy.coordinates import SkyCoord
+
+input_file = "hlsp_udf_hst_acs_wfc_all_f435w_v1_drz.fits"
+fn = get_pkg_data_filename(input_file)
+f = fits.open(fn)
+w = WCS(f[0].header)
+
+cutout_size = [512, 512]
+step_size = 256
+
+# Create arrays of pixel coordinates
+pix_x_range = np.arange(step_size, w.array_shape[0] - step_size, step_size)
+pix_y_range = np.arange(step_size, w.array_shape[1] - step_size, step_size)
+
+# List to store center coordinates
+cut_center_coord_list = []
+
+for pix_x in pix_x_range:
+    for pix_y in pix_y_range:
+        # Calculate the center coordinates for the cutout
+        center_skycoord = pixel_to_skycoord(pix_x, pix_y, w)
+        
+        # Create a SkyCoord object
+        cut_center_coord = SkyCoord(ra=center_skycoord.ra.deg, dec=center_skycoord.dec.deg, unit=u.deg)
+
+        # Append the center coordinates to the list
+        cut_center_coord_list.append(cut_center_coord)
+
+# Now, cut_center_coord_list contains the desired center coordinates
+
+print(cut_center_coord_list) # checking cut center RA, Dec coordinate
+
+
+import numpy as np
+from astropy.io import fits
+import glob
+import os
+from astrocut import fits_cut  # 해당 모듈이 필요합니다. 필요한 경우 설치하세요.
+
+# 이미지 파일 목록 가져오기
+input_flcs = glob.glob("NaN_0a_4stacked_f435w_drc.fits")
+
+# 자를 중심 좌표 리스트 생성
+for coord in cut_center_coord_list:
+    # 모든 결과 파일을 저장할 폴더 생성
+    output_folder = "0a_cut_file"  # 여기에 적절한 폴더 이름을 지정하세요
+    os.makedirs(output_folder, exist_ok=True)
+
+    for input_file in input_flcs:
+        # 이미지 자르기
+        cutout_file = fits_cut(
+            input_file, coord, cutout_size, single_outfile=True, output_dir=output_folder
+        )
+
+        # 이미지 불러오기
+        cutout_data = fits.getdata(cutout_file)
+
+        # -999 값 검사
+        if not np.any(cutout_data == -999):
+            # 새로운 파일 이름 생성
+            filename = "{}_{}_cut.fits".format(
+                os.path.basename(input_file).rstrip(".fits"),
+                os.path.basename(cutout_file).rstrip("_astrocut.fits"),
+            )
+
+            # 이미지 저장
+            os.rename(cutout_file, os.path.join(output_folder, filename))
+        else:
+            # -999 값을 가진 이미지는 삭제
+            if os.path.exists(cutout_file):
+                os.remove(cutout_file)
+
+
+
+
