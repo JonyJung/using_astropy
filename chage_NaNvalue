@@ -1,0 +1,37 @@
+import os
+import numpy as np
+from astropy.io import fits
+import glob
+import shutil
+
+# 이미지 파일 읽기
+files = glob.glob("*drc.fits")
+
+if not files:
+    print("파일을 찾을 수 없습니다.")
+else:
+    # 결과를 저장할 폴더 생성
+    output_folder = "NaN_output"
+    os.makedirs(output_folder, exist_ok=True)
+
+    for file in files:
+        hdulist = fits.open(file)
+        data = hdulist[1].data
+
+        # 데이터 유형 확인 및 부동소수점으로 변환
+        if not np.issubdtype(data.dtype, np.floating):
+            data = data.astype(float)
+
+        # NaN 값을 원하는 값으로 대체 (예: -999)
+        data[np.isnan(data)] = -999
+
+        # 대체된 값을 포함한 새로운 이미지 저장
+        output_file = os.path.join(output_folder, "NaN_" + os.path.basename(file))
+        hdulist[1].data = data
+        hdulist.writeto(output_file, overwrite=True)
+        hdulist.close()
+        print(f"{output_file} 생성 완료.")
+
+    # 결과 파일을 새로 생성한 폴더로 이동
+    for output_file in glob.glob(os.path.join(output_folder, "*")):
+        shutil.move(output_file, ".")
