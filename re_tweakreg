@@ -1,0 +1,89 @@
+
+
+import glob
+import os
+import shutil
+
+import astropy.units as u
+from astropy.coordinates import SkyCoord
+from astropy.io import fits
+from astropy.table import Table
+from astropy.units import Quantity
+from astroquery.gaia import Gaia
+from ccdproc import ImageFileCollection
+from drizzlepac import astrodrizzle, tweakreg
+
+
+input_flcs = ("*.fits")
+visit_nums = []
+
+
+refcat = "gaia.cat"
+cw = 3.5  # Set to two times the FWHM of the PSF.
+wcsname = "Gaia"  # Specify the WCS name for this alignment
+
+# Final run with ideal parameters, updatehdr = True
+
+input = ("*.fits")
+
+
+
+input = glob.glob("*.fits") #집어 넣을 파일명
+
+tweakreg.TweakReg(
+        input,
+        imagefindcfg={
+            "threshold": 3.5,
+            "conv_width": 3.5,
+            "peakmax": 15000,
+            "peakmin": 0.005,
+        },
+        fitgeometry="general",
+        #fitgeometry='rscale',
+        interactive=False,
+        shiftfile=True,
+        see2dplot=True,  # See 2d histogram for initial offset?
+        wcsname=wcsname,  # Give our WCS a new name
+        reusename=True,
+        configobj = None, 
+        outshifts='shift_general.txt',           
+        updatehdr=True)
+
+
+
+
+import glob
+import os
+import shutil
+
+from astropy.io import ascii
+from astropy.io import fits
+from astropy.table import Table
+from astropy.visualization import ZScaleInterval
+from astroquery.mast import Observations
+from ccdproc import ImageFileCollection
+from drizzlepac import tweakreg
+from drizzlepac import astrodrizzle
+from IPython.display import Image
+import matplotlib.pyplot as plt
+
+%matplotlib inline
+
+
+
+plt.figure(figsize = (10, 10))
+chip1_data = fits.open('hlsp_udf_hst_acs_wfc_all_f435w_v1_drz.fits')['PRIMARY', 1].data
+zscale = ZScaleInterval()
+z1, z2 = zscale.get_limits(chip1_data)
+plt.imshow(chip1_data, cmap='Greys',origin='lower', vmin=z1, vmax=z2)
+
+match_tab = ascii.read('hlsp_udf_hst_acs_wfc_all_f435w_v1_drz_catalog_fit.match')            #load match file in astropy table
+match_tab_chip2 = match_tab[match_tab['col15'] == 1]                 #filter table for sources on chip 2 (on ext 1)
+x_cord, y_cord = match_tab_chip2['col11'], match_tab_chip2['col12']
+
+plt.scatter(x_cord, y_cord, s=20, edgecolor='r', facecolor='None',label='Matched Sources, Chip 2, t=3.5, p=0.005-15000')
+plt.ylim(0,9900)
+plt.xlim(0,9900)
+plt.legend(loc='best', fontsize=10)
+
+plt.savefig('t=4, p=15000')
