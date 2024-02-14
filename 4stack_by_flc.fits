@@ -1,0 +1,110 @@
+import glob
+import os
+import shutil
+
+import astropy.units as u
+from astropy.coordinates import SkyCoord
+from astropy.io import fits
+from astropy.table import Table
+from astropy.units import Quantity
+from astroquery.gaia import Gaia
+from ccdproc import ImageFileCollection
+from drizzlepac import astrodrizzle, tweakreg
+
+input_flcs = glob.glob("*flc.fits")
+visit_nums = []
+
+for file in input_flcs:
+        num = str(file[-14:-12])
+        visit_nums.append(num)
+
+
+        collec = ImageFileCollection(
+    ".",
+    glob_include="*flc.fits",
+    ext=0,
+    keywords=[
+        "targname",
+        "ra_targ",
+        "dec_targ",
+        "filter",
+        "exptime",
+        "postarg1",
+        "postarg2",
+    ],
+)
+
+table = collec.summary
+table["exptime"].format = "7.1f"
+table["ra_targ"].format = "7.7f"
+table["dec_targ"].format = "7.7f"
+table["postarg1"].format = "7.2f"
+table["postarg2"].format = "7.2f"
+table
+
+RA = table["ra_targ"][0]
+Dec = table["dec_targ"][0]
+
+
+
+coord = SkyCoord(ra=RA, dec=Dec, unit=(u.deg, u.deg))
+radius = Quantity(6.0, u.arcmin)
+
+gaia_query = Gaia.query_object_async(coordinate=coord, radius=radius)
+reduced_query = gaia_query["ra", "dec", "phot_g_mean_mag"]
+reduced_query.write("gaia.cat", format="ascii.commented_header", overwrite=True)
+
+
+
+refcat = "gaia.cat"
+cw = 3.5  # Set to two times the FWHM of the PSF.
+wcsname = "Gaia"  # Specify the WCS name for this alignment
+
+# Final run with ideal parameters, updatehdr = True
+
+input = glob.glob("flc_f435w/*.fits")
+
+
+
+for num in visit_nums:
+    input = glob.glob(f"j8m8{num}*.fits")
+
+    tweakreg.TweakReg(
+        input,
+        imagefindcfg={
+            "threshold": 10,
+            "conv_width": 3.5,
+            "peakmax": 7000,
+        },
+        fitgeometry="general",
+        interactive=False,
+        shiftfile=False,
+        updatehdr=False,
+        see2dplot=False,  # See 2d histogram for initial offset?
+        wcsname=wcsname,  # Give our WCS a new name
+        reusename=True,
+    )
+
+    astrodrizzle.AstroDrizzle(
+        input,
+        output=f"{num}_4stacked_f435w_drc.fits",
+        skymethod="localmin",
+        skylower = -100.0,
+        skywidth = 0.10000000149011612,
+        combine_type="median",
+        combine_nhigh=1,
+        driz_sep_bits="336",
+        final_bits="336",
+        final_pixfrac=1.0,
+        final_rot=0.0,
+        final_scale=0.03,
+        context=True,
+        build=True,
+        preserve=False,
+        clean=True,
+    )
+
+input_flcs = glob.glob("./*_4stacked_f435w.fits")
+os.mkdir("data/LowExp")
+for file in input_flcs:
+    shutil.move(file, f"./data/LowExp/{file}")
