@@ -1,0 +1,28 @@
+import os
+import re
+
+# 함수 정의: 파일 이름에서 중간 숫자 좌표 부분을 추출하는 함수
+def extract_middle_coordinate(filename):
+    match = re.search(r'_([\d\.-]+)_([\d\.-]+)_', filename)
+    if match:
+        return match.group(1), match.group(2)
+    else:
+        return None, None
+
+# 함수 정의: 'Input' 폴더의 파일과 'Target' 폴더의 파일을 비교하여 중간 숫자 좌표가 일치하지 않는 파일을 삭제하는 함수
+def remove_non_matching_files(input_folder, target_folder):
+    input_files = os.listdir(input_folder)
+    target_files = os.listdir(target_folder)
+
+    # 'Input' 폴더의 중간 숫자 좌표를 모아서 집합에 저장
+    input_coordinates_set = set(extract_middle_coordinate(file) for file in input_files)
+
+    # 'Target' 폴더에 있는 파일들을 순회하며 중간 숫자 좌표가 'Input' 폴더에 없는 경우 해당 파일 삭제
+    for target_file in target_files:
+        x_target, y_target = extract_middle_coordinate(target_file)
+        if (x_target, y_target) not in input_coordinates_set:
+            os.remove(os.path.join(target_folder, target_file))
+            print(f"Deleted: {os.path.join(target_folder, target_file)}")
+
+# 'Input'와 'Target' 폴더에서 파일을 비교하여 일치하지 않는 파일 삭제
+remove_non_matching_files("9e_cut_file", "9e_level5_cut")
