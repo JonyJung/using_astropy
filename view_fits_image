@@ -1,0 +1,18 @@
+import matplotlib.pyplot as plt
+
+input_file = glob.glob("01_4stacked_f435w_drc.fits")
+for input in input_file:
+    file_name = os.path.basename(input)
+    file = fits.open(input)
+    image = file[1].data
+
+    z = ZScaleInterval()
+    z1,z2 = z.get_limits(image)
+
+    plt.figure(figsize=(14,10))
+    plt.imshow(image, cmap='gray', origin='lower', vmin=z1, vmax=z2)
+    plt.colorbar()
+    plt.show()
+    
+print(z1)
+print(z2)
