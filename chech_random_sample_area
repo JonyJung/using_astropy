@@ -1,0 +1,45 @@
+import os
+import glob
+from astropy.io import fits
+from astropy.wcs import WCS
+import matplotlib.pyplot as plt
+from astropy.visualization import ZScaleInterval
+
+# 천체 헤더를 읽어 이미지를 조회하는 함수
+def plot_image_with_zoom(input_file, target_ra_dec, zoom_size):
+    file_name = os.path.basename(input_file)
+    file = fits.open(input_file)
+    image = file[0].data
+
+    # WCS 정보 추출
+    wcs = WCS(file[0].header)
+
+    # 타겟 Ra, Dec 좌표를 픽셀 값으로 변환
+    x, y = wcs.world_to_pixel_values(target_ra_dec[0], target_ra_dec[1])
+
+    # 512x512 크기로 확대하여 자르기
+    x_start = int(x - zoom_size / 2)
+    x_end = int(x_start + zoom_size)
+    y_start = int(y - zoom_size / 2)
+    y_end = int(y_start + zoom_size)
+
+    # 잘린 이미지 조회
+    zoomed_image = image[y_start:y_end, x_start:x_end]
+
+    # Z 스케일 설정
+    z = ZScaleInterval()
+    z1, z2 = z.get_limits(zoomed_image)
+
+    # 이미지 플로팅
+    plt.figure(figsize=(8, 8))
+    plt.imshow(zoomed_image, cmap='gray', origin='lower', vmin=z1, vmax=z2)
+    plt.title(f"Zoomed Image for Ra, Dec = {target_ra_dec}")
+    plt.show()
+
+# 사용 예시
+input_file = glob.glob("hlsp_udf_hst_acs_wfc_all_f435w_v1_drz.fits")[0]
+target_ra_dec = (53.18783084, -27.77968626)
+zoom_size = 512
+
+# 함수 호출
+plot_image_with_zoom(input_file, target_ra_dec, zoom_size)
