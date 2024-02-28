@@ -1,0 +1,32 @@
+from astropy.io import fits
+from astropy.coordinates import SkyCoord
+import astropy.units as u
+
+def get_ra_dec_from_fits(file_path):
+    # FITS 파일 열기
+    hdulist = fits.open(file_path)
+    header = hdulist[1].header
+    
+    # RA와 DEC 키워드 확인
+    ra_keyword = 'RA' if 'RA' in header else 'CRVAL1'
+    dec_keyword = 'DEC' if 'DEC' in header else 'CRVAL2'
+
+    # RA와 DEC 추출
+    ra = header[ra_keyword]
+    dec = header[dec_keyword]
+
+    # 좌표 생성
+    coordinates = SkyCoord(ra=ra*u.degree, dec=dec*u.degree, frame='icrs')
+
+    # FITS 파일 닫기
+    hdulist.close()
+
+    return coordinates
+
+# 사용 예시
+fits_file_path3 = '1b_4stacked_f435w_drc.fits'
+coordinates = get_ra_dec_from_fits(fits_file_path3)
+
+# Ra, Dec 출력
+print(f"RA: {coordinates.ra.deg} degrees")
+print(f"Dec: {coordinates.dec.deg} degrees")
