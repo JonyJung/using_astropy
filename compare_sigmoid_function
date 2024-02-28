@@ -1,0 +1,72 @@
+import numpy as np
+from astropy.io import fits
+import matplotlib.pyplot as plt
+
+def original_sigmoid_stretch(image_data, data_min, data_max, a):
+    normalized_data = (image_data - data_min) / (data_max - data_min)
+    stretched_data = 1 / (1 + np.exp(-a * normalized_data))
+    return stretched_data
+
+def remake_sigmoid_stretch(image_data, data_min, data_max, a):
+    normalized_data = (image_data - data_min) / (data_max - data_min)
+    stretched_data = np.abs(2 * (1 / (1 + np.exp(a * normalized_data)) - 1/2))
+    return stretched_data
+
+def display_stretched_images(fits_file_path, a_value1, a_value2):
+    # Load FITS file
+    hdul = fits.open(fits_file_path)
+    image_data = hdul[1].data
+
+    # Exclude NaN values from the image data
+    non_nan_values = image_data[~np.isnan(image_data)]
+
+    # Find the minimum and maximum values excluding NaN
+    data_min = np.nanmin(non_nan_values)
+    data_max = np.nanmax(non_nan_values)
+
+    # Create subplots for each stretching function
+    fig, axs = plt.subplots(2, 2, figsize=(15, 10))
+    fig.suptitle('Comparison of Sigmoid Stretching Functions')
+
+    # Original Sigmoid Stretching with a_value = 5.0
+    stretched_data1 = original_sigmoid_stretch(image_data, data_min, data_max, a_value1)
+    axs[0, 0].imshow(stretched_data1, cmap='gray', origin='lower')
+    axs[0, 0].set_title(f'Original Sigmoid (a = {a_value1})')
+    axs[0, 0].axis('off')
+    cbar1 = plt.colorbar(axs[0, 0].imshow(stretched_data1, cmap='gray', origin='lower'), ax=axs[0, 0])
+    cbar1.set_label('Intensity')
+
+    # Remake Sigmoid Stretching with a_value = 5.0
+    stretched_data2 = remake_sigmoid_stretch(image_data, data_min, data_max, a_value1)
+    axs[0, 1].imshow(stretched_data2, cmap='gray', origin='lower')
+    axs[0, 1].set_title(f'Remake Sigmoid (a = {a_value1})')
+    axs[0, 1].axis('off')
+    cbar2 = plt.colorbar(axs[0, 1].imshow(stretched_data2, cmap='gray', origin='lower'), ax=axs[0, 1])
+    cbar2.set_label('Intensity')
+
+    # Original Sigmoid Stretching with a_value = 10.0
+    stretched_data3 = original_sigmoid_stretch(image_data, data_min, data_max, a_value2)
+    axs[1, 0].imshow(stretched_data3, cmap='gray', origin='lower')
+    axs[1, 0].set_title(f'Original Sigmoid (a = {a_value2})')
+    axs[1, 0].axis('off')
+    cbar3 = plt.colorbar(axs[1, 0].imshow(stretched_data3, cmap='gray', origin='lower'), ax=axs[1, 0])
+    cbar3.set_label('Intensity')
+
+    # Remake Sigmoid Stretching with a_value = 10.0
+    stretched_data4 = remake_sigmoid_stretch(image_data, data_min, data_max, a_value2)
+    axs[1, 1].imshow(stretched_data4, cmap='gray', origin='lower')
+    axs[1, 1].set_title(f'Remake Sigmoid (a = {a_value2})')
+    axs[1, 1].axis('off')
+    cbar4 = plt.colorbar(axs[1, 1].imshow(stretched_data4, cmap='gray', origin='lower'), ax=axs[1, 1])
+    cbar4.set_label('Intensity')
+
+    plt.show()
+
+    # Close the FITS file
+    hdul.close()
+
+# Example usage
+fits_file_path = 'NaN_01_4stacked_f435w_drc_cutout_53.166146_-27.820228_512-x-512_cut.fits'
+a_value_original = 5.0
+a_value_remake = 10.0
+display_stretched_images(fits_file_path, a_value_original, a_value_remake)
