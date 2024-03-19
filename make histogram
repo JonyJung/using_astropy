@@ -1,0 +1,77 @@
+import glob
+import os
+import shutil
+import warnings
+from datetime import date
+
+import matplotlib.pyplot as plt
+import numpy as np
+from astrocut import fits_cut
+from astropy import units as u
+from astropy.wcs import WCS
+from astropy.coordinates import SkyCoord
+from astropy.io import fits
+from astropy.utils.data import get_pkg_data_filename
+from astropy.visualization import ZScaleInterval
+#from mpdaf.obj import WCS, Image
+from scipy import ndimage
+
+import astropy.io.fits as fits
+import numpy as np
+from astropy.wcs import WCS
+import matplotlib.pyplot as plt
+from astropy.visualization import ZScaleInterval
+
+
+image_file = "NaN_0a_4stacked_f435w_drc_cutout_53.122727_-27.756235_512-x-512_cut.fits"
+hdu_list = fits.open(image_file)
+hdu_list.info()
+
+
+image_data = hdu_list[1].data
+print(type(image_data))
+
+
+image_data = fits.getdata(image_file)
+
+
+print(type(image_data)) # Show the Python type for image_data
+print(image_data.shape) # Show the number of pixels per side in the 2-D image
+
+
+flat_data = image_data.flatten() #Change 1D data
+print(flat_data)
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+
+# 가우시안 함수 정의
+def gaussian(x, amplitude, mean, stddev):
+    return amplitude * np.exp(-((x - mean) / (stddev)) ** 2 / 2)
+
+
+# 히스토그램 데이터
+hist, bin_edges = np.histogram(flat_data, bins=200)
+bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+# 초기 추정값 설정
+initial_guess = [10.0, 0.0, 0.001]
+
+# 가우시안 피팅 수행
+params, covariance = curve_fit(gaussian, bin_centers, hist, p0=initial_guess)
+
+# 결과 출력
+print("Amplitude:", params[0])
+print("Mean:", params[1])
+print("Stddev:", params[2])
+
+# 히스토그램 및 피팅 결과 그래프 그리기
+plt.hist(flat_data, bins=100,  histtype='step', edgecolor='green', label="0a_4stack_cut_sample", alpha=0.7)
+plt.plot(bin_centers, gaussian(bin_centers, *params), 'r-', label='fit')
+plt.yscale('log')
+plt.ylim(10e-1, 10e0)
+plt.xlim(-0.005, 0.005)
+plt.legend()
+plt.show()
