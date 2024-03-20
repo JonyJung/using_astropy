@@ -1,0 +1,39 @@
+import glob
+import os
+import shutil
+import warnings
+from datetime import date
+
+import matplotlib.pyplot as plt
+import numpy as np
+from astrocut import fits_cut
+from astropy import units as u
+from astropy.coordinates import SkyCoord  # High-level coordinates
+from astropy.coordinates import ICRS, Galactic, FK4, FK5  # Low-level frames
+from astropy.io import fits
+from astropy.utils.data import get_pkg_data_filename
+from astropy.visualization import ZScaleInterval
+from astropy.wcs import WCS
+#from mpdaf.obj import WCS, Image
+from scipy import ndimage
+
+
+import matplotlib.pyplot as plt
+
+input_file = glob.glob("01_4stacked_f435w_drc.fits")
+for input in input_file:
+    file_name = os.path.basename(input)
+    file = fits.open(input)
+    image = file[1].data
+
+    z = ZScaleInterval()
+    z1,z2 = z.get_limits(image)
+
+    plt.figure(figsize=(14,10))
+    plt.imshow(image, cmap='gray', origin='lower', vmin=z1, vmax=z2)
+    plt.savefig(f"{file_name}.png")
+    plt.show()
+
+
+image_data = fits.open('01_4stacked_f435w_drc.fits')
+info()
