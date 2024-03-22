@@ -1,0 +1,41 @@
+import os
+import numpy as np
+from astropy.io import fits
+
+# FITS 파일이 들어있는 폴더 경로
+folder_path = "01_level5_normalize_sample6"
+
+# 출력 폴더 생성
+output_folder = "01_level5_normalize_sample6_(512,512,1)"
+os.makedirs(output_folder, exist_ok=True)
+
+# 폴더 내의 모든 파일 목록 가져오기
+file_list = os.listdir(folder_path)
+
+# 각 FITS 파일에 대해 작업
+for file_name in file_list:
+    # 파일이 FITS 파일인지 확인
+    if file_name.endswith('.fits'):
+        # FITS 파일 경로 생성
+        fits_path = os.path.join(folder_path, file_name)
+        
+        # FITS 파일 로드
+        hdul = fits.open(fits_path)
+        data = hdul[0].data
+
+        # 차원을 확장하여 (512, 512, 1)로 만듭니다.
+        data_expanded = np.expand_dims(data, axis=-1)
+
+        # 파일 이름 수정 (확장자 제거)
+        file_name_without_extension = os.path.splitext(file_name)[0]
+
+        # 저장할 파일 경로 생성
+        output_file_path = os.path.join(output_folder, f"{file_name_without_extension}.fits")
+
+        # 이미지를 FITS 파일로 저장
+        fits.writeto(output_file_path, data_expanded, overwrite=True)
+
+        # 처리 완료 메시지 출력
+        #print(f"{file_name} 변환 및 저장 완료")
+
+print("전체 파일 처리 및 저장 완료")
