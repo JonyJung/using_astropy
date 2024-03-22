@@ -1,0 +1,35 @@
+import os
+import random
+from astropy.io import fits
+import matplotlib.pyplot as plt
+
+# fits 파일이 있는 폴더 경로
+folder_path = "01_cut_file_stretch"
+
+# 폴더 내 fits 파일 목록 가져오기
+fits_files = [f for f in os.listdir(folder_path) if f.endswith('.fits')]
+
+# 랜덤으로 30개의 파일 선택
+random_files = random.sample(fits_files, 30)
+
+# 선택된 파일들의 헤더 읽기
+for file_name in random_files:
+    file_path = os.path.join(folder_path, file_name)
+    hdul = fits.open(file_path)
+    header = hdul[0].header
+    
+    # 헤더 출력
+    print(f"Header of {file_name}:")
+    print(header)
+    print("\n")
+    
+    # 이미지 출력
+    data = hdul[0].data
+    plt.figure()
+    plt.imshow(data, cmap='gray')
+    plt.colorbar(label='Intensity')
+    plt.title(f"FITS Image: {file_name}")
+    plt.show()
+    
+    # fits 파일 닫기
+    hdul.close()
