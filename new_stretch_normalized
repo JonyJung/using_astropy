@@ -1,0 +1,61 @@
+import os
+import numpy as np
+from astropy.io import fits
+
+def sigmoid_stretch(image_data, a):
+    stretched_data = 1 / (1 + np.exp(-a * (image_data - 0.5)))
+    return stretched_data
+
+def stretch_and_normalize_fits(input_fits_path, output_fits_path, a_value):
+    # Load FITS file
+    try:
+        hdul = fits.open(input_fits_path)
+        if hdul is None:
+            raise ValueError("Failed to open FITS file.")
+    except Exception as e:
+        print("Error:", e)
+        return
+    
+    # Get data and header
+    image_data = hdul[1].data.astype(float)  # Convert data to float type
+    header = hdul[1].header
+
+    # Replace NaN values with 0
+    image_data[np.isnan(image_data)] = 0
+
+    # Stretch the image data using sigmoid function
+    stretched_data = sigmoid_stretch(image_data, a_value)
+
+    # Update the FITS header with relevant information (if needed)
+    # For example, you may want to update the history or add a comment
+    header['COMMENT'] = "Image data has been stretched and normalized using a sigmoid function."
+
+    # Save the stretched data with the original header to a new FITS file
+    hdu = fits.PrimaryHDU(stretched_data, header=header)
+    hdul_stretched = fits.HDUList([hdu])
+    hdul_stretched.writeto(output_fits_path, overwrite=True)
+
+    # Close the FITS file
+    hdul.close()
+    hdul_stretched.close()
+
+def stretch_and_normalize_all_fits_files_in_folder(input_folder, output_folder, a_value):
+    # Create output folder if it doesn't exist
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    # Loop through all files in the input folder
+    for filename in os.listdir(input_folder):
+        if filename.endswith(".fits"):
+            # Construct input and output file paths
+            input_file_path = os.path.join(input_folder, filename)
+            output_file_path = os.path.join(output_folder, filename)
+
+            # Stretch and normalize the FITS file
+            stretch_and_normalize_fits(input_file_path, output_file_path, a_value)
+
+# Example usage
+input_folder = '01_level5_sample'
+output_folder = '01_level5_normalize_sample5'
+a_value = 5.0  # Adjust this value to control the amplification
+stretch_and_normalize_all_fits_files_in_folder(input_folder, output_folder, a_value)
