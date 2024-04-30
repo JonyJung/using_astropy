@@ -1,0 +1,32 @@
+import os
+import re
+import shutil
+
+# 입력 폴더 경로 설정
+input_folder = '01_cut_file_new_Stretch_(512,512,1)'
+
+# 폴더 내의 파일 목록을 가져옵니다.
+files = os.listdir(input_folder)
+
+# 파일 이름에서 중간 부분을 추출합니다.
+pattern = re.compile(r'cutout_(.+?)_512-x-512_cut.fits')
+coords = [re.search(pattern, file_name).group(1) for file_name in files if re.search(pattern, file_name)]
+
+# 추출한 좌표를 기준으로 파일을 저장할 폴더 및 인덱스 설정
+target_folders = {
+    '01_cut_file_new_Stretch_(512,512,1)': 0,
+    '01_rot_90': 1,
+    '01_rot_180': 2,
+    '01_rot_270': 3,
+    '01_rev_left_right': 4,
+    '01_rev_up_down': 5
+}
+
+# 각 폴더에 대해 50개의 파일을 저장
+for folder, start_index in target_folders.items():
+    target_folder = os.path.join('re_01_4stack_datasets', folder)
+    os.makedirs(target_folder, exist_ok=True)
+    for i in range(start_index, start_index + 300, 6):
+        source_file = os.path.join(input_folder, f'NaN_01_4stacked_f435w_drc_cutout_{coords[-(i+1)]}_512-x-512_cut.fits')
+        destination_file = os.path.join(target_folder, os.path.basename(source_file))
+        shutil.copy(source_file, destination_file)
