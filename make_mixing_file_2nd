@@ -1,0 +1,47 @@
+import os
+import re
+import shutil
+
+def extract_coordinates_from_filenames(directory):
+    # 디렉토리 내 모든 파일을 가져옴
+    file_names = os.listdir(directory)
+    
+    # 파일 이름에서 좌표 추출을 위한 정규 표현식
+    pattern = r'(\d+\.\d+)_(-?\d+\.\d+)'
+
+    coordinates = []
+
+    # 각 파일 이름에 대해 정규 표현식을 사용하여 좌표 추출
+    for file_name in file_names:
+        match = re.search(pattern, file_name)
+        if match:
+            coordinates.append((match.group(1), match.group(2)))
+
+    return coordinates
+
+def copy_files_to_pick_folder(coordinates, source_directory, pick_directory):
+    # '01_rev_up_down_pick' 폴더가 없으면 생성
+    if not os.path.exists(pick_directory):
+        os.makedirs(pick_directory)
+    
+    # 각 좌표에 해당하는 파일을 추출하여 복사
+    for coordinate in coordinates:
+        # 파일 이름에서 좌표 부분만 추출
+        coordinate_part = f"{coordinate[0]}_{coordinate[1]}"
+        # 현재 폴더의 파일들과 비교하여 일치하는 파일 찾기
+        for file_name in os.listdir(source_directory):
+            if coordinate_part in file_name:
+                source_file_path = os.path.join(source_directory, file_name)
+                destination_file_path = os.path.join(pick_directory, file_name)
+                shutil.copyfile(source_file_path, destination_file_path)
+                break
+
+# 폴더 이름 설정
+source_folder_path = '01_rev_up_down'
+pick_folder_path = '01_rev_up_down_pick'
+
+# 추출된 좌표 가져오기
+coordinates = extract_coordinates_from_filenames(source_folder_path)
+
+# '01_rev_up_down_pick' 폴더에 파일 복사
+copy_files_to_pick_folder(coordinates, os.getcwd(), pick_folder_path)
