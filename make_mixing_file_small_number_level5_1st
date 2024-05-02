@@ -1,0 +1,37 @@
+import os
+import re
+import shutil
+
+# 입력 폴더 경로 설정
+input_folder = '01_level5_cut_new_Stretch_(512,512,1)'
+
+# 폴더 내의 파일 목록을 가져옵니다.
+files = os.listdir(input_folder)
+
+# 파일 이름에서 중간 부분을 추출하고 좌표를 추출합니다.
+pattern = re.compile(r'cutout_([-+]?\d*\.\d+|\d+)_([-+]?\d*\.\d+|\d+)_512-x-512_cut.fits')
+file_coords = [(file_name, float(re.search(pattern, file_name).group(1)), float(re.search(pattern, file_name).group(2))) for file_name in files if re.search(pattern, file_name)]
+
+# 좌표를 기준으로 파일을 정렬합니다.
+file_coords.sort(key=lambda x: (x[1], x[2]))
+
+# 추출한 좌표를 기준으로 파일을 저장할 폴더 및 인덱스 설정
+target_folders = {
+    '01_level5_cut_new_Stretch_(512,512,1)': 0,
+    '01_level5_rot_90': 1,
+    '01_level5_rot_180': 2,
+    '01_level5_rot_270': 3,
+    '01_level5_rev_left_right': 4,
+    '01_level5_rev_up_down': 5
+}
+
+# 각 폴더에 대해 50개의 파일을 저장
+for folder, start_index in target_folders.items():
+    target_folder = os.path.join('re_01_level5_4stack_datasets', folder)
+    os.makedirs(target_folder, exist_ok=True)
+    for i in range(start_index, start_index + 300, 6):
+        # 정렬된 순서대로 파일을 선택합니다.
+        source_file_name, _, _ = file_coords[i]
+        source_file = os.path.join(input_folder, source_file_name)
+        destination_file = os.path.join(target_folder, os.path.basename(source_file))
+        shutil.copy(source_file, destination_file)
