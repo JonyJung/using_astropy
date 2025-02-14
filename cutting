@@ -1,0 +1,329 @@
+import numpy as np
+from astropy.io import fits
+from astropy.wcs import WCS
+from astropy.coordinates import SkyCoord
+from astropy.wcs.utils import pixel_to_skycoord
+import astropy.units as u
+
+# FITS 파일 경로
+input_file = "25_54_hlsp_udf_hst_acs-wfc_all_f775w_v1_drz_normalizing.fits"
+
+# FITS 파일 열기
+f = fits.open(input_file)
+w = WCS(f[0].header)
+
+# Cutout 크기 및 이동 크기 설정
+cutout_size = [512, 512]
+step_size = 256
+
+# 픽셀 좌표 배열 생성
+pix_x_range = np.arange(step_size, w.array_shape[0] - step_size, step_size)
+pix_y_range = np.arange(step_size, w.array_shape[1] - step_size, step_size)
+
+# 중심 좌표를 저장할 리스트
+cut_center_coord_list = []
+
+# 픽셀 좌표에서 중심 좌표로 변환
+for pix_x in pix_x_range:
+    for pix_y in pix_y_range:
+        # Cutout의 중심 좌표 계산
+        center_skycoord = pixel_to_skycoord(pix_x, pix_y, w)
+        
+        # SkyCoord 객체 생성
+        cut_center_coord = SkyCoord(ra=center_skycoord.ra.deg, dec=center_skycoord.dec.deg, unit=u.deg)
+
+        # 중심 좌표 리스트에 추가
+        cut_center_coord_list.append(cut_center_coord)
+
+# 이제 cut_center_coord_list에 원하는 중심 좌표들이 저장되었습니다.
+
+
+
+
+
+  print(cut_center_coord_list) # checking cut center RA, Dec coordinate
+
+
+
+
+
+  import numpy as np
+from astropy.io import fits
+import glob
+import os
+from astrocut import fits_cut  # 해당 모듈이 필요합니다. 필요한 경우 설치하세요.
+
+# 이미지 파일 목록 가져오기
+input_flcs = glob.glob("NaN_25_54_8stacked_f775w_drc_background_matched_normalizing.fits")
+
+# 자를 중심 좌표 리스트 생성
+for coord in cut_center_coord_list:
+    # 모든 결과 파일을 저장할 폴더 생성
+    output_folder = "25_54_cut_file"  # 여기에 적절한 폴더 이름을 지정하세요
+    os.makedirs(output_folder, exist_ok=True)
+
+    for input_file in input_flcs:
+        # 이미지 자르기
+        cutout_file = fits_cut(
+            input_file, coord, cutout_size, single_outfile=True, output_dir=output_folder
+        )
+
+        # 이미지 불러오기
+        cutout_data = fits.getdata(cutout_file)
+
+        # -999 값 검사
+        if not np.any(cutout_data == -999):
+            # 새로운 파일 이름 생성
+            filename = "{}_{}_cut.fits".format(
+                os.path.basename(input_file).rstrip(".fits"),
+                os.path.basename(cutout_file).rstrip("_astrocut.fits"),
+            )
+
+            # 이미지 저장
+            os.rename(cutout_file, os.path.join(output_folder, filename))
+        else:
+            # -999 값을 가진 이미지는 삭제
+            if os.path.exists(cutout_file):
+                os
+
+
+
+
+
+import glob
+import os
+from astrocut import fits_cut
+from astropy.coordinates import SkyCoord
+from astropy.io import fits
+
+# 이미지 파일 목록 가져오기
+input_flcs = glob.glob("25_54_hlsp_udf_hst_acs-wfc_all_f775w_v1_drz_normalizing.fits")
+
+# 자를 중심 좌표 리스트 생성
+for coord in cut_center_coord_list:
+    # 모든 결과 파일을 저장할 폴더 생성
+    output_folder = "25_54_level5_cut" # 여기에 적절한 폴더 이름을 지정하세요
+    os.makedirs(output_folder, exist_ok=True)
+
+    for input_file in input_flcs:
+        try:
+            # 이미지 자르기
+            cutout_file = fits_cut(
+                input_file, coord, cutout_size, single_outfile=True, output_dir=output_folder
+            )
+
+            # 이미지 불러오기
+            cutout_data = fits.getdata(cutout_file)
+
+            # 새로운 파일 이름 생성
+            filename = "{}_{}_cut.fits".format(
+                os.path.basename(input_file).rstrip(".fits"),
+                os.path.basename(cutout_file).rstrip("_astrocut.fits"),
+            )
+
+            # 이미지 저장
+            os.rename(cutout_file, os.path.join(output_folder, filename))
+        except:
+            # 예외 발생 시 무시하고 다음으로 계속 진행
+            pass
+
+
+
+
+import os
+import re
+
+# Function to extract the middle coordinate part from the filename
+def extract_middle_coordinate(filename):
+    # Modify the regex to handle both filename formats
+    match = re.search(r'_([-+]?\d+\.\d+)_([-+]?\d+\.\d+)_', filename)
+    if match:
+        return match.group(1), match.group(2)
+    else:
+        return None, None
+
+# Function to remove non-matching files between 'Input' and 'Target' folders based on coordinate comparison
+def remove_non_matching_files(input_folder, target_folder):
+    input_files = os.listdir(input_folder)
+    target_files = os.listdir(target_folder)
+
+    # Collect coordinates from the 'Input' folder files
+    input_coordinates_set = set(extract_middle_coordinate(file) for file in input_files)
+
+    # Loop through 'Target' folder files and remove those that don't match any coordinates in the 'Input' folder
+    for target_file in target_files:
+        x_target, y_target = extract_middle_coordinate(target_file)
+        if (x_target, y_target) not in input_coordinates_set:
+            os.remove(os.path.join(target_folder, target_file))
+            print(f"Deleted: {os.path.join(target_folder, target_file)}")
+
+# Run the function to compare and remove non-matching files
+remove_non_matching_files("25_54_cut_file", "25_54_level5_cut")
+
+
+
+
+
+
+  import os
+
+# 폴더 경로 설정
+folder_path = "25_54_cut_file"
+
+# 폴더 내 파일들을 확인
+for filename in os.listdir(folder_path):
+    # 파일이 'NaN_'으로 시작하지 않으면 삭제
+    if not filename.startswith("NaN_"):
+        file_path = os.path.join(folder_path, filename)
+        try:
+            os.remove(file_path)
+            print(f"Deleted: {filename}")
+        except Exception as e:
+            print(f"Error deleting {filename}: {e}")
+
+
+
+
+
+
+
+import os
+import re
+
+# Function to extract the middle coordinate part from the filename
+def extract_middle_coordinate(filename):
+    # Modify the regex to handle both filename formats
+    match = re.search(r'_([-+]?\d+\.\d+)_([-+]?\d+\.\d+)_', filename)
+    if match:
+        return match.group(1), match.group(2)
+    else:
+        return None, None
+
+# Function to remove non-matching files between 'Input' and 'Target' folders based on coordinate comparison
+def remove_non_matching_files(input_folder, target_folder):
+    input_files = [file for file in os.listdir(input_folder) if os.path.isfile(os.path.join(input_folder, file))]
+    target_files = [file for file in os.listdir(target_folder) if os.path.isfile(os.path.join(target_folder, file))]
+
+    # Collect coordinates from the 'Input' folder files
+    input_coordinates_set = set(extract_middle_coordinate(file) for file in input_files)
+
+    # Loop through 'Target' folder files and remove those that don't match any coordinates in the 'Input' folder
+    for target_file in target_files:
+        x_target, y_target = extract_middle_coordinate(target_file)
+        if (x_target, y_target) not in input_coordinates_set:
+            file_path = os.path.join(target_folder, target_file)
+            os.remove(file_path)
+            print(f"Deleted: {file_path}")
+
+# Run the function to compare and remove non-matching files
+remove_non_matching_files("25_54_cut_file", "25_54_level5_cut")
+
+
+
+
+
+import os
+import re
+
+# 파일 이름에서 중간 숫자 좌표 부분을 추출하는 함수
+def extract_middle_coordinate(filename):
+    match = re.search(r'_([-+]?\d+\.\d+)_([-+]?\d+\.\d+)_', filename)
+    if match:
+        # 숫자로 변환해 반환
+        return float(match.group(1)), float(match.group(2))
+    else:
+        return None, None
+
+# 'Input' 폴더의 파일과 'Target' 폴더의 파일을 비교하여 일치하지 않는 파일을 삭제하는 함수
+def remove_non_matching_files(input_folder, target_folder):
+    # 'Input' 폴더의 파일 중 좌표를 추출하여 집합에 저장
+    input_files = [file for file in os.listdir(input_folder) if os.path.isfile(os.path.join(input_folder, file))]
+    input_coordinates_set = set(extract_middle_coordinate(file) for file in input_files)
+
+    # 'Target' 폴더의 파일 중 좌표를 추출하여 비교
+    target_files = [file for file in os.listdir(target_folder) if os.path.isfile(os.path.join(target_folder, file))]
+    for target_file in target_files:
+        target_file_path = os.path.join(target_folder, target_file)
+        x_target, y_target = extract_middle_coordinate(target_file)
+        
+        # 좌표가 'Input' 폴더에 없는 경우 파일 삭제
+        if (x_target, y_target) not in input_coordinates_set:
+            os.remove(target_file_path)
+            print(f"Deleted: {target_file_path}")
+
+# 실행: 두 폴더 비교하여 일치하지 않는 파일 삭제
+remove_non_matching_files("0b_cut_file", "25_54_cut_file")
+
+
+
+
+
+
+
+
+import os
+import re
+
+# 파일 이름에서 중간 숫자 좌표 부분을 추출하는 함수
+def extract_middle_coordinate(filename):
+    match = re.search(r'_([-+]?\d+\.\d+)_([-+]?\d+\.\d+)_', filename)
+    if match:
+        # 숫자로 변환해 반환
+        return float(match.group(1)), float(match.group(2))
+    else:
+        return None, None
+
+# 'Input' 폴더의 파일과 'Target' 폴더의 파일을 비교하여 일치하지 않는 파일을 삭제하는 함수
+def remove_non_matching_files(input_folder, target_folder):
+    # 'Input' 폴더의 파일 중 좌표를 추출하여 집합에 저장
+    input_files = [file for file in os.listdir(input_folder) if os.path.isfile(os.path.join(input_folder, file))]
+    input_coordinates_set = set(extract_middle_coordinate(file) for file in input_files)
+
+    # 'Target' 폴더의 파일 중 좌표를 추출하여 비교
+    target_files = [file for file in os.listdir(target_folder) if os.path.isfile(os.path.join(target_folder, file))]
+    for target_file in target_files:
+        target_file_path = os.path.join(target_folder, target_file)
+        x_target, y_target = extract_middle_coordinate(target_file)
+        
+        # 좌표가 'Input' 폴더에 없는 경우 파일 삭제
+        if (x_target, y_target) not in input_coordinates_set:
+            os.remove(target_file_path)
+            print(f"Deleted: {target_file_path}")
+
+# 실행: 두 폴더 비교하여 일치하지 않는 파일 삭제
+remove_non_matching_files("0b_cut_file", "25_54_level5_cut")
+
+
+
+
+
+  import os
+import re
+
+# Function to extract the middle coordinate part from the filename
+def extract_middle_coordinate(filename):
+    # Modify the regex to handle both filename formats
+    match = re.search(r'_([-+]?\d+\.\d+)_([-+]?\d+\.\d+)_', filename)
+    if match:
+        return match.group(1), match.group(2)
+    else:
+        return None, None
+
+# Function to remove non-matching files between 'Input' and 'Target' folders based on coordinate comparison
+def remove_non_matching_files(input_folder, target_folder):
+    input_files = [file for file in os.listdir(input_folder) if os.path.isfile(os.path.join(input_folder, file))]
+    target_files = [file for file in os.listdir(target_folder) if os.path.isfile(os.path.join(target_folder, file))]
+
+    # Collect coordinates from the 'Input' folder files
+    input_coordinates_set = set(extract_middle_coordinate(file) for file in input_files)
+
+    # Loop through 'Target' folder files and remove those that don't match any coordinates in the 'Input' folder
+    for target_file in target_files:
+        x_target, y_target = extract_middle_coordinate(target_file)
+        if (x_target, y_target) not in input_coordinates_set:
+            file_path = os.path.join(target_folder, target_file)
+            os.remove(file_path)
+            print(f"Deleted: {file_path}")
+
+# Run the function to compare and remove non-matching files
+remove_non_matching_files("25_54_level5_cut", "25_54_cut_file")
