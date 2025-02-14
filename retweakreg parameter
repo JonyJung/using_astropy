@@ -1,0 +1,124 @@
+import glob
+import os
+import shutil
+import astropy.units as u
+
+from astropy.coordinates import SkyCoord
+from astropy.io import fits
+from astropy.table import Table
+from astropy.units import Quantity
+from astroquery.gaia import Gaia
+from ccdproc import ImageFileCollection
+from drizzlepac import astrodrizzle, tweakreg
+
+
+
+input_flcs = ("*.fits")
+visit_nums = []
+
+
+
+
+refcat = "gaia.cat"
+cw = 3.5  # Set to two times the FWHM of the PSF.
+wcsname = "Gaia"  # Specify the WCS name for this alignment
+
+# Final run with ideal parameters, updatehdr = True
+
+input = ("*.fits")
+
+
+
+
+import glob
+import re
+from drizzlepac import tweakreg
+
+# 집어넣을 파일 리스트
+input_files = glob.glob("*.fits")
+
+# 설정할 변수 범위
+threshold_range = [round(i * 0.1, 1) for i in range(40, 75)]  # 4.0 ~ 7.5
+peakmin_range = [round(i * 0.01, 2) for i in range(1, 8)]    # 0.01 ~ 0.1
+
+# tweakreg.log 파일에서 xrms와 yrms를 추출하는 함수
+def get_rms_from_log(logfile="tweakreg.log"):
+    xrms, yrms = None, None
+    with open(logfile, 'r') as f:
+        for line in f:
+            # FIT XRMS와 FIT YRMS 값을 추출하기 위한 정규 표현식
+            if "FIT XRMS" in line:
+                match = re.search(r"FIT XRMS: ([\d.]+)\s+FIT YRMS: ([\d.]+)", line)
+                if match:
+                    xrms = float(match.group(1))
+                    yrms = float(match.group(2))
+                    break
+    return xrms, yrms
+
+# 종료 조건을 만족할 때까지 threshold와 peakmin 조합 시도
+for threshold in threshold_range:
+    for peakmin in peakmin_range:
+        print(f"Trying threshold: {threshold}, peakmin: {peakmin}")
+        
+        # tweakreg 실행
+        tweakreg.TweakReg(
+            input_files,
+            imagefindcfg={
+                "threshold": threshold,
+                "conv_width": 3.5,
+                "peakmax": 15000,
+                "peakmin": peakmin,
+            },
+            fitgeometry="general",
+            interactive=False,
+            shiftfile=True,
+            see2dplot=True,  # See 2D histogram for initial offset
+            wcsname=wcsname,  # 새로운 WCS 이름
+            reusename=True,
+            outshifts='shift_general.txt',
+            updatehdr=False
+        )
+
+        # 로그 파일에서 xrms와 yrms 추출
+        xrms, yrms = get_rms_from_log()
+
+        if xrms is None or yrms is None:
+            print("Failed to retrieve RMS values. Check the log file.")
+            continue
+
+        print(f"xrms: {xrms}, yrms: {yrms}")
+
+        # 종료 조건 확인
+        if xrms < 0.1 and yrms < 0.1:
+            print(f"Success! xrms: {xrms}, yrms: {yrms}")
+            print(f"Final threshold: {threshold}, Final peakmin: {peakmin}")
+            break
+    else:
+        # 내부 루프가 break 되지 않았을 때만 실행됨
+        continue
+    # 외부 루프가 break 되면 내부에서도 break됨
+    break
+
+
+
+
+input = glob.glob("*.fits") #집어 넣을 파일명
+
+tweakreg.TweakReg(
+        input,
+        imagefindcfg={
+            "threshold": 4.5,
+            "conv_width": 3.5,
+            "peakmax": 15000,
+            "peakmin": 0.02,
+        },
+        fitgeometry="general",
+        #fitgeometry='rscale',
+        interactive=False,
+        shiftfile=True,
+        see2dplot=True,  # See 2d histogram for initial offset?
+        wcsname=wcsname,  # Give our WCS a new name
+        reusename=True,
+        configobj = None, 
+        outshifts='shift_general.txt',           
+        updatehdr=True)
