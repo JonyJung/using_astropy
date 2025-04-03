@@ -1,0 +1,189 @@
+import numpy as np
+from astropy.io import fits
+
+def sigmoid_stretch(image_data, a):
+    stretched_data = 1 / (1 + np.exp(-a * (image_data - 0.5)))
+    return stretched_data
+
+def stretch_and_normalize_fits(input_fits_path, a_value):
+    # Load FITS file
+    try:
+        hdul = fits.open(input_fits_path)
+        if hdul is None:
+            raise ValueError("Failed to open FITS file.")
+    except Exception as e:
+        print("Error:", e)
+        return
+    
+    # Get data and header
+    image_data = hdul[0].data.astype(float)  # Convert data to float type
+    header = hdul[0].header
+
+    # Replace NaN values with 0 (if not already replaced with -999)
+    image_data[np.isnan(image_data)] = 0
+
+    # Create a mask to identify the pixels with value -999
+    mask = (image_data != -999)
+
+    # Stretch the image data using sigmoid function, excluding -999 pixels
+    stretched_data = np.zeros_like(image_data)  # Initialize with zeros or any other value
+    stretched_data[mask] = sigmoid_stretch(image_data[mask], a_value)
+
+    # Restore -999 values where the original image had them
+    stretched_data[~mask] = -999
+
+    # Update the FITS header with relevant information
+    header['COMMENT'] = "Image data has been stretched and normalized using a sigmoid function, excluding -999 pixels."
+
+    # Create a new file name for the output
+    output_fits_path = input_fits_path.replace(".fits", "_normalizing.fits")
+
+    # Save the stretched data with the original header to a new FITS file
+    hdu = fits.PrimaryHDU(stretched_data, header=header)
+    hdul_stretched = fits.HDUList([hdu])
+    hdul_stretched.writeto(output_fits_path, overwrite=True)
+
+    # Close the FITS file
+    hdul.close()
+    hdul_stretched.close()
+    print(f"Processed and saved: {output_fits_path}")
+
+# Example usage
+input_file = '47_67_hlsp_udf_hst_acs-wfc_all_f775w_v1_drz.fits'
+a_value = 5.0  # Adjust this value to control the amplification
+stretch_and_normalize_fits(input_file, a_value)
+
+
+
+
+
+##########
+##########
+import numpy as np
+from astropy.io import fits
+
+def calculate_background(image_data, mask):
+    """Calculate the median background value of the image, excluding masked pixels."""
+    return np.median(image_data[mask])
+
+def match_background(input_fits_path, reference_fits_path):
+    # Load input FITS file
+    try:
+        hdul_input = fits.open(input_fits_path)
+        if hdul_input is None:
+            raise ValueError("Failed to open input FITS file.")
+    except Exception as e:
+        print("Error:", e)
+        return
+    
+    # Load reference FITS file
+    try:
+        hdul_reference = fits.open(reference_fits_path)
+        if hdul_reference is None:
+            raise ValueError("Failed to open reference FITS file.")
+    except Exception as e:
+        print("Error:", e)
+        return
+    
+    # Get data and header from both files
+    input_data = hdul_input[1].data.astype(float)  # Assuming data is in HDU[1]
+    reference_data = hdul_reference[0].data.astype(float)  # Assuming data is in HDU[0]
+    header = hdul_input[1].header
+
+    # Replace NaN values with 0 (if not already replaced with -999)
+    input_data[np.isnan(input_data)] = 0
+    reference_data[np.isnan(reference_data)] = 0
+
+    # Create masks to exclude pixels with -999
+    input_mask = (input_data != -999)
+    reference_mask = (reference_data != -999)
+
+    # Calculate background values for both images
+    input_background = calculate_background(input_data, input_mask)
+    reference_background = calculate_background(reference_data, reference_mask)
+
+    # Subtract the background from the input image to match the reference background
+    input_data[input_mask] -= (input_background - reference_background)
+
+    # Update the FITS header with relevant information
+    header['COMMENT'] = "Image data has been background matched, excluding -999 pixels."
+
+    # Create a new file name for the output
+    output_fits_path = input_fits_path.replace(".fits", "_background_matched.fits")
+
+    # Save the background-matched data with the original header to a new FITS file
+    hdu = fits.PrimaryHDU(input_data, header=header)
+    hdul_matched = fits.HDUList([hdu])
+    hdul_matched.writeto(output_fits_path, overwrite=True)
+
+    # Close the FITS files
+    hdul_input.close()
+    hdul_reference.close()
+    hdul_matched.close()
+    print(f"Processed and saved: {output_fits_path}")
+
+# Example usage
+input_file = 'NaN_47_67_8stacked_f775w_drc.fits'
+reference_file = '47_67_hlsp_udf_hst_acs-wfc_all_f775w_v1_drz.fits'
+match_background(input_file, reference_file)
+
+
+
+
+
+##########
+##########
+import numpy as np
+from astropy.io import fits
+
+def sigmoid_stretch(image_data, a):
+    stretched_data = 1 / (1 + np.exp(-a * (image_data - 0.5)))
+    return stretched_data
+
+def stretch_and_normalize_fits(input_fits_path, a_value):
+    # Load FITS file
+    try:
+        hdul = fits.open(input_fits_path)
+        if hdul is None:
+            raise ValueError("Failed to open FITS file.")
+    except Exception as e:
+        print("Error:", e)
+        return
+    
+    # Get data and header
+    image_data = hdul[0].data.astype(float)  # Convert data to float type
+    header = hdul[0].header
+
+    # Replace NaN values with 0 (if not already replaced with -999)
+    image_data[np.isnan(image_data)] = 0
+
+    # Create a mask to identify the pixels with value -999
+    mask = (image_data != -999)
+
+    # Stretch the image data using sigmoid function, excluding -999 pixels
+    stretched_data = np.zeros_like(image_data)  # Initialize with zeros or any other value
+    stretched_data[mask] = sigmoid_stretch(image_data[mask], a_value)
+
+    # Restore -999 values where the original image had them
+    stretched_data[~mask] = -999
+
+    # Update the FITS header with relevant information
+    header['COMMENT'] = "Image data has been stretched and normalized using a sigmoid function, excluding -999 pixels."
+
+    # Create a new file name for the output
+    output_fits_path = input_fits_path.replace(".fits", "_normalizing.fits")
+
+    # Save the stretched data with the original header to a new FITS file
+    hdu = fits.PrimaryHDU(stretched_data, header=header)
+    hdul_stretched = fits.HDUList([hdu])
+    hdul_stretched.writeto(output_fits_path, overwrite=True)
+
+    # Close the FITS file
+    hdul.close()
+    hdul_stretched.close()
+    print(f"Processed and saved: {output_fits_path}")
+
+# Example usage
+input_file = 'NaN_47_67_8stacked_f775w_drc_background_matched.fits'
+a_value = 5.0  # Adjust this value to control the amplification
+stretch_and_normalize_fits(input_file, a_value)
