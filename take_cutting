@@ -1,0 +1,37 @@
+from astropy.io import fits
+import numpy as np
+import os
+
+# 입력 파일 이름
+input_file = "13_2stacked_f775w_drc.fits"  # 자를 FITS 파일 경로
+output_file = "2stack_1k_cut.fits"  # 결과 저장 파일
+
+# 자를 중심 좌표 (x, y)
+center_x = 7888
+center_y = 5180
+
+# 자를 크기 (반으로 나눈 값: 256이면 총 512x512 크기)
+cut_size = 512
+
+# FITS 파일 불러오기
+with fits.open(input_file) as hdul:
+    data = hdul[1].data  # 첫 번째 HDU의 이미지 데이터 가져오기
+    header = hdul[1].header  # 헤더 정보 가져오기
+
+# 이미지 크기 확인
+ny, nx = data.shape  # FITS 이미지의 크기 (height, width)
+
+# 자를 영역 설정 (경계를 벗어나지 않도록 조정)
+x_min = max(center_x - cut_size, 0)
+x_max = min(center_x + cut_size, nx)
+y_min = max(center_y - cut_size, 0)
+y_max = min(center_y + cut_size, ny)
+
+# 이미지 자르기
+cutout_data = data[y_min:y_max, x_min:x_max]
+
+# 새로운 FITS 파일로 저장
+hdu = fits.PrimaryHDU(cutout_data, header=header)
+hdu.writeto(output_file, overwrite=True)
+
+print("이미지 자르기 완료! 결과 파일:", output_file)
