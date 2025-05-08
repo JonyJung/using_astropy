@@ -1,0 +1,44 @@
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+from astropy.io import fits
+from astropy.visualization import ZScaleInterval
+
+# 이미지 파일 경로 설정
+fits_folder_2 = "hudf_normalizing_inner_cut"
+fits_folder_3 = "4stack_normalizing_inner_cut"
+
+# Z-scale을 적용하여 이미지를 로드하고 시각화하는 함수
+def display_image_with_zscale(fits_filename, ax, title="Image"):
+    # FITS 파일 로드
+    with fits.open(fits_filename) as hdul:
+        image_data = hdul[0].data
+    
+    # Z-scale을 자동으로 계산
+    interval = ZScaleInterval()
+    vmin, vmax = interval.get_limits(image_data)
+    
+    # 이미지 시각화
+    ax.imshow(image_data, cmap='gray', origin='lower', vmin=vmin, vmax=vmax)
+    ax.set_title(title)
+    ax.axis('off')  # 축 없애기
+
+# 이미지 파일 목록 가져오기
+fits_files_2 = sorted([os.path.join(fits_folder_2, f) for f in os.listdir(fits_folder_2) if f.endswith('.fits')])
+fits_files_3 = sorted([os.path.join(fits_folder_3, f) for f in os.listdir(fits_folder_3) if f.endswith('.fits')])
+
+# 두 파일씩 비교하여 나란히 표시하기
+num_files = min(len(fits_files_2), len(fits_files_3))  # 두 폴더에서 가장 적은 파일 개수 기준
+
+# 이미지 쌍 나열하여 시각화
+for i in range(0, num_files, 2):
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+
+    # 첫 번째 이미지 표시 (fits_files_2)
+    display_image_with_zscale(fits_files_2[i], axs[0], title=f"Image 2 - {os.path.basename(fits_files_2[i])}")
+    
+    # 두 번째 이미지 표시 (fits_files_3)
+    display_image_with_zscale(fits_files_3[i], axs[1], title=f"Image 3 - {os.path.basename(fits_files_3[i])}")
+    
+    plt.tight_layout()
+    plt.show()
