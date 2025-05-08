@@ -1,0 +1,62 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from astropy.io import fits
+from astropy.wcs import WCS
+
+# 1. FITS 파일 로드
+fits_filename = "hlsp_udf_hst_acs-wfc_all_f775w_v1_drz.fits"
+hdul = fits.open(fits_filename)
+image_data = hdul[0].data
+wcs = WCS(hdul[0].header)
+
+# Figure 및 WCS 기반 Axes 생성
+fig = plt.figure(figsize=(10, 10))
+ax = plt.subplot(projection=wcs)
+ax.imshow(image_data, origin='lower', cmap='gray',
+          vmin=np.percentile(image_data, 1), vmax=np.percentile(image_data, 99))
+
+# 이미지 전체 범위 설정 (직선이 잘리지 않도록)
+ax.set_xlim(0, image_data.shape[1])
+ax.set_ylim(0, image_data.shape[0])
+
+# 4개의 직선 설정
+x_vals = np.linspace(0, image_data.shape[1]-1, 1000)
+lines = [
+    (0.9, 5000, 'red', 'right_below'),
+    (-1.1, 16000, 'orange', 'left_below'),
+    (0.9, -4000, 'green', 'left_above'),
+    (-1.1, 6000, 'yellow', 'right_above')
+]
+
+for a, b, color, region in lines:
+    y_vals = a * x_vals + b
+
+    if region == 'right_below':
+        mask = (y_vals < image_data.shape[0]) & (x_vals > image_data.shape[1] / 2)
+    elif region == 'left_below':
+        mask = (y_vals < image_data.shape[0]) & (x_vals < image_data.shape[1] / 2)
+    elif region == 'left_above':
+        mask = (y_vals > 0) & (x_vals < image_data.shape[1] / 2)
+    elif region == 'right_above':
+        mask = (y_vals > 0) & (x_vals > image_data.shape[1] / 2)
+
+    x_plot = x_vals[mask]
+    y_plot = y_vals[mask]
+
+    # 직선 그리기
+    ax.plot(x_plot, y_plot, linestyle='--', color=color, linewidth=1.5, label=f"y={a}x+{b}")
+
+    # RA, Dec 범위 계산
+    coords_world = wcs.wcs_pix2world(np.column_stack((x_plot, y_plot)), 0)
+    ra_min, ra_max = coords_world[:, 0].min(), coords_world[:, 0].max()
+    dec_min, dec_max = coords_world[:, 1].min(), coords_world[:, 1].max()
+    print(f"{color} ({region}) 영역의 RA 범위: {ra_min:.6f} ~ {ra_max:.6f}, Dec 범위: {dec_min:.6f} ~ {dec_max:.6f}")
+
+# 축 라벨 및 범례
+ax.set_xlabel("RA (J2000)")
+ax.set_ylabel("Dec (J2000)")
+ax.legend()
+plt.title("Line Over Image with RA/Dec Coverage")
+
+plt.show()
+hdul.close()
